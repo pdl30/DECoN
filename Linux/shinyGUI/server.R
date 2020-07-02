@@ -153,7 +153,6 @@ shinyServer(function(input, output) {
                 if(input$plotScale==1){p <- p + ylab("Coverage")}
                 if(input$plotScale==2){p <- p + ylab("Log (Coverage)")}
                 p<-p + geom_point(data=Data1[Data1$variable==input$SampHigh,],aes(x=exons,y=value),colour="blue",cex=2.5)
-                p <- p + labs(title=paste('Sample:', gsub("_PE_sorted","", input$PlotSamp), '; Gene: ', input$PlotGenes, sep=' ' ))
                 p
             
             }else if(input$plotType==2){
@@ -173,7 +172,6 @@ shinyServer(function(input, output) {
                 for(gene in input$PlotGenes){
                     p<-p + geom_line(data=Data1[Data1$variable==input$SampHigh & Data1$exons%in%which(bed.file[,4]==gene),],aes(x=exons,y=value,group=variable),colour="blue")
                 }
-                p <- p + labs(title=paste('Sample:', gsub("_PE_sorted","", input$PlotSamp), '; Gene: ', input$PlotGenes, sep=' ' ))
                 p
             }
 
