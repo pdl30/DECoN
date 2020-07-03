@@ -3,9 +3,9 @@ packrat::on()
 library(shiny)
 library(ggplot2)
 
+source('metadata.R')
 
-
-shinyUI(navbarPage("DECoN",
+shinyUI(navbarPage(run_name,
 
 
 	tabPanel("Introduction",
