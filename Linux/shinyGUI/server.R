@@ -154,8 +154,9 @@ shinyServer(function(input, output) {
                 p<-ggplot(data=Data1[Data1$variable%in%input$PlotSamp,],aes(x=exons,y=value))  + geom_boxplot(width=0.75) + theme_bw() + xlab(NULL)+ ggtitle("")
                 if(input$plotScale==1){p <- p + ylab("Coverage")}
                 if(input$plotScale==2){p <- p + ylab("Log (Coverage)")}
-                p<-p + geom_point(data=Data1[Data1$variable==input$SampHigh,],aes(x=exons,y=value),colour="blue",cex=2.5)
-                p <- p + labs(title=paste('Sample:', gsub("_PE_sorted","", input$PlotSamp), '; Gene: ', input$PlotGenes, sep=' ' ))
+                p <- p + 
+                  geom_point(data = Data1[Data1$variable==input$SampHigh,], aes(x=exons,y=value), colour="blue", cex=2.5) + 
+                  labs(title = paste('Sample:', gsub("_PE_sorted","", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' '))
                 p
             
             }else if(input$plotType==2){
