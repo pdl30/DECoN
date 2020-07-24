@@ -137,7 +137,12 @@ shinyServer(function(input, output) {
 
 
         output$PlotGenesInput<-renderUI({
-                    selectInput("PlotGenes",choices=as.list(paste(unique(bed.file[,4]))),label="Select genes to plot",multiple=T,selected=paste(unique(bed.file[,4])[1:2]))
+                    selectInput(
+                      "PlotGenes",
+                      choices = as.list(paste(unique(bed.file[,4]))),
+                      label = "Select genes to plot",
+                      multiple = TRUE,
+                      selected = factor(get_metadata("gene_name"), levels = unique(bed.file[,4])))
         })
 
 
@@ -295,7 +300,7 @@ shinyServer(function(input, output) {
         selectInput(
         inputId = "selVar1",
         label = "Use the CNV ID given in the table above",
-        choices = c(seq(nrow(cnv.calls))),
+        choices = c("None", seq(nrow(cnv.calls))),
         selected = get_metadata("cnv_id"))
     })
 
