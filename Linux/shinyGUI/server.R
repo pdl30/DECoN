@@ -4,7 +4,6 @@ library(reshape)
 library(grid)
 library(ExomeDepth)
 
-load('Data.RData')          #wrapper script copies data to this hard path
 
 genesis_calls <- read.csv('cnvs.csv')
 cnv.calls$merge_id <- paste(gsub('_PE_sorted', '', cnv.calls$sample), cnv.calls$start, cnv.calls$end, sep='-')

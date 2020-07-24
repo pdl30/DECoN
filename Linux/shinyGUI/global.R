@@ -9,5 +9,7 @@ get_metadata <- function(metadata_name) {
     metadata[metadata['attrib'] == metadata_name, 'value']
 }
 
-print("global.R: loaded get_metadata function")
+load('Data.RData')          #wrapper script copies data to this hard path
+
+print("global.R: loaded get_metadata function and Data.Rdata")
 print(paste0("avaiable metadata: ", paste(metadata$attrib, collapse = ", ")))
