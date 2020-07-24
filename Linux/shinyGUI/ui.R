@@ -4,7 +4,7 @@ library(shiny)
 library(ggplot2)
 
 shinyUI(navbarPage(
-  run_name,
+  get_metadata("run_name"),
   tabPanel(
     "CNV Calls",
     h2("CNV Calls"),
