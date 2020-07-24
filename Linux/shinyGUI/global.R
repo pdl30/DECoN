@@ -1,6 +1,6 @@
-### Any extra metadata to be shared with the front end and back end can be defined here
+### Global variables, will be run at the start of the application
 
 # extract metadata from csv
 metadata <- read.csv('metadata.csv')
 run_name <- metadata[metadata['attrib'] == 'run_name', 'value']
-print("metadata.R: loaded run_name")
+print("global.R: loaded run_name")
