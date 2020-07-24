@@ -1,3 +1,5 @@
 "attrib","value"
 "run_name","example_run"
-"cnv_id",1
+"cnv_id",2
+"sample_name", "12G12312_PE_sorted"
+"gene_name", "BRCA1"

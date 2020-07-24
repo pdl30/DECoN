@@ -120,10 +120,13 @@ shinyServer(function(input, output) {
 
 
         output$PlotSampleHighlight<-renderUI({
-               selectInput("SampHigh",choices=as.list(c(sample.names)),label="Select sample to highlight",multiple=F,selected=sample.names[1])        
+               selectInput(
+                 inputId = "SampHigh",
+                 choices = as.list(c(sample.names)),
+                 label = "Select sample to highlight",
+                 multiple = FALSE,
+                 selected = get_metadata("sample_name"))        
         })
- 
-
 
         output$PlotSamplesInput<-renderUI({
             if(input$ChooseFrom==1){    

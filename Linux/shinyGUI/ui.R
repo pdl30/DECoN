@@ -5,6 +5,7 @@ library(ggplot2)
 
 shinyUI(navbarPage(
   get_metadata("run_name"),
+
   tabPanel(
     "CNV Calls",
     h2("CNV Calls"),
@@ -56,7 +57,6 @@ shinyUI(navbarPage(
   
   tabPanel(
     "Coverage Evaluation",
-    
     downloadButton("downloadCov", "Download Coverages"),
     h3('Failed Samples'),
     
