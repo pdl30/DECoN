@@ -289,7 +289,11 @@ shinyServer(function(input, output) {
     )
 
     output$selVar<-renderUI({
-        selectInput("selVar1","Use the CNV ID given in the table above",c('None',1:nrow(cnv.calls)))
+        selectInput(
+        inputId = "selVar1",
+        label = "Use the CNV ID given in the table above",
+        choices = c(seq(nrow(cnv.calls))),
+        selected = get_metadata("cnv_id"))
     })
 
     output$minEx <- renderUI({
