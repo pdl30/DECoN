@@ -33,6 +33,7 @@ shinyUI(navbarPage(
             "All" = 2,
             "None" = 3
           ),
+          selected = 2,
           label = "Select set of samples to be plotted in addition to the sample containing the variant"
         )
       ),
@@ -42,7 +43,8 @@ shinyUI(navbarPage(
         radioButtons(
           "chScale",
           choices = list("Raw data" = 1, "Log transformed" = 2),
-          label = "Plot raw data or data on log scale"
+          label = "Plot raw data or data on log scale",
+          selected = 2,
         )
         #,"By exon (Not available when plotting no additional samples)"=3,"By sample"=4,"By exon and sample (Not available when plotting no additional samples)"=5),label="Transform data or normalise by subtracting median.")
       )
