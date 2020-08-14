@@ -118,6 +118,7 @@ shinyUI(navbarPage(
         radioButtons(
           "plotScale",
           choices = list("None" = 1, "Log" = 2),
+          selected = 2,
           label = "Data transformation"
         )
       ),
