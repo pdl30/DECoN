@@ -11,8 +11,13 @@ genesis_calls$merge_id <- paste(genesis_calls$sample, genesis_calls$start, genes
 cnv.calls<- cnv.calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
 cnv.calls <- cnv.calls[ , !(names(cnv.calls) %in% 'merge_id')]
 
-input_selected <- function(input_column) {
-  !(input_column == "None" | is.null(input_column)) 
+
+variant_selected <- function(input) {
+  !(input$selVar1 == "None" | is.null(input$selVar1))
+}
+
+input_selected <- function(input) {
+  variant_selected(input) & "minEx1" %in% names(input)
 }
 
 
@@ -311,19 +316,23 @@ shinyServer(function(input, output) {
     })
 
     output$minEx <- renderUI({
-        if(input_selected(input$selVar1)){
-            numericInput("minEx1",min=1,max=nrow(bed.file)-1,value=max(cnv.calls[strtoi(input$selVar1),]$start.p-5,1),label="First exon")
+        if(variant_selected(input)){
+            numericInput("minEx1", min=1, max=nrow(bed.file)-1,
+                         value=max(cnv.calls[strtoi(input$selVar1),]$start.p-5,1),
+                         label="First exon")
         }
     })
 
     output$maxEx <- renderUI({
-      if(input_selected(input$selVar1)){
-            numericInput("maxEx1",min=2,max=nrow(bed.file),value=min(cnv.calls[strtoi(input$selVar1),]$end.p+5,nrow(bed.file)),label="Last")
+      if(variant_selected(input)){
+            numericInput("maxEx1",min=2,max=nrow(bed.file),
+                         value=min(cnv.calls[strtoi(input$selVar1),]$end.p+5,nrow(bed.file)),
+                         label="Last")
         }
     })
 
     output$plot <- renderPlot({
-      if (!input_selected(input$selVar1)) {
+      if (!input_selected(input)) {
         plot(NULL, xlim = c(1, 10), ylim = c(0, 1000))
       } else {
         Sample <- cnv.calls[strtoi(input$selVar1),]$sample
@@ -434,12 +443,12 @@ shinyServer(function(input, output) {
 
     
     output$genes<-renderPlot({
-        if(!input_selected(input$selVar1)){
+        if(!input_selected(input)){
             par(mar=rep(0,4))
             plot.new()
         }else{
-            exonRange<-input$minEx1:input$maxEx1
-            genes_sel = unique(bed.file[exonRange,4])
+          exonRange <- input$minEx1:input$maxEx1
+          genes_sel = unique(bed.file[exonRange,4])
             temp<-cbind(1:nrow(bed.file),bed.file)[exonRange,]
             len<-table(temp$name)
             mp<-tapply(exonRange,temp[,5],mean)
@@ -464,11 +473,11 @@ shinyServer(function(input, output) {
 
     output$CIplot<-renderPlot({
         
-        if(!input_selected(input$selVar1)){
+        if(!input_selected(input)){
             plot(NULL,xlim=c(1,10),ylim=c(0,1000))
         }else{
             Sample<-cnv.calls[strtoi(input$selVar1),]$sample
-            exonRange<-input$minEx1:input$maxEx1
+            exonRange <- input$minEx1:input$maxEx1
             refs_sample<-refs[[Sample]]
             Totals<-rowSums(ExomeCount[exonRange,c(Sample,refs_sample)])
             ratio = (ExomeCount[exonRange,Sample]/Totals)/models[[Sample]][1]
