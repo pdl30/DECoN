@@ -10,6 +10,12 @@ cnv.calls$merge_id <- paste(gsub('_PE_sorted', '', cnv.calls$sample), cnv.calls$
 genesis_calls$merge_id <- paste(genesis_calls$sample, genesis_calls$start, genesis_calls$end, sep='-')
 cnv.calls<- cnv.calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
 cnv.calls <- cnv.calls[ , !(names(cnv.calls) %in% 'merge_id')]
+
+input_selected <- function(input_column) {
+  !(input_column == "None" | is.null(input_column)) 
+}
+
+
 # Define server logic required to draw a histogram
 
 shinyServer(function(input, output) {
@@ -155,10 +161,10 @@ shinyServer(function(input, output) {
                 Data<-cbind(exons,ExomeCount[exons,sample.names])
                 Data1<-melt(Data,id=c("exons"))
                 Data1$exons<-as.factor(Data1$exons)
-                if(input$plotScale==2){Data1$value=log(Data1$value)}
+                if(input$plotScale=="2"){Data1$value=log(Data1$value)}
                 p<-ggplot(data=Data1[Data1$variable%in%input$PlotSamp,],aes(x=exons,y=value))  + geom_boxplot(width=0.75) + theme_bw() + xlab(NULL)+ ggtitle("")
-                if(input$plotScale==1){p <- p + ylab("Coverage")}
-                if(input$plotScale==2){p <- p + ylab("Log (Coverage)")}
+                if(input$plotScale=="1"){p <- p + ylab("Coverage")}
+                if(input$plotScale=="2"){p <- p + ylab("Log (Coverage)")}
                 p <- p + 
                   geom_point(data = Data1[Data1$variable==input$SampHigh,], aes(x=exons,y=value), colour="blue", cex=2.5) + 
                   labs(title = paste('Sample:', gsub("_PE_sorted","", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' '))
@@ -305,13 +311,13 @@ shinyServer(function(input, output) {
     })
 
     output$minEx <- renderUI({
-        if(input$selVar1!="None"){
+        if(input_selected(input$selVar1)){
             numericInput("minEx1",min=1,max=nrow(bed.file)-1,value=max(cnv.calls[strtoi(input$selVar1),]$start.p-5,1),label="First exon")
         }
     })
 
     output$maxEx <- renderUI({
-        if(input$selVar1!="None"){
+      if(input_selected(input$selVar1)){
             numericInput("maxEx1",min=2,max=nrow(bed.file),value=min(cnv.calls[strtoi(input$selVar1),]$end.p+5,nrow(bed.file)),label="Last")
         }
     })
@@ -474,7 +480,7 @@ shinyServer(function(input, output) {
 
     
     output$genes<-renderPlot({
-        if(input$selVar1=="None"){
+        if(!input_selected(input$selVar1)){
             par(mar=rep(0,4))
             plot.new()
         }else{
@@ -504,7 +510,7 @@ shinyServer(function(input, output) {
 
     output$CIplot<-renderPlot({
         
-        if(input$selVar1=="None"){
+        if(!input_selected(input$selVar1)){
             plot(NULL,xlim=c(1,10),ylim=c(0,1000))
         }else{
             Sample<-cnv.calls[strtoi(input$selVar1),]$sample
