@@ -442,37 +442,52 @@ shinyServer(function(input, output) {
 
 
     
-    output$genes<-renderPlot({
-        if(!input_selected(input)){
-            par(mar=rep(0,4))
-            plot.new()
-        }else{
-          exonRange <- input$minEx1:input$maxEx1
-          genes_sel = unique(bed.file[exonRange,4])
-            temp<-cbind(1:nrow(bed.file),bed.file)[exonRange,]
-            len<-table(temp$name)
-            mp<-tapply(exonRange,temp[,5],mean)
-            mp<-mp[genes_sel]
-            len<-len[genes_sel]
-            Genes<-data.frame(genes_sel,mp,len-.5,1)
-            names(Genes)=c("Gene","MP","Length","Ind")
-   
-            if(!is.null(exon_numbers)){
+    output$genes <- renderPlot({
+      if (!input_selected(input)) {
+        par(mar = rep(0, 4))
+        plot.new()
+      } else{
+        exonRange <- input$minEx1:input$maxEx1
+        genes_sel <-  unique(bed.file[exonRange, 4])
+        temp <- cbind(1:nrow(bed.file), bed.file)[exonRange, ]
+        len <- summary(temp$name)
+        mp <- tapply(exonRange, temp[, 5], mean)
+        mp <- unname(mp[genes_sel])
+        len <- unname(len[genes_sel] - 0.5)
+        Genes <- data.frame(Gene = genes_sel, 
+                            MP = mp, 
+                            Length = len,
+                            Ind = 1)
 
-             qplot(data=Genes,MP,Ind,fill=Gene,geom="tile",width=Length,label=Gene) + geom_text() + theme_bw() + theme(legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.text.y = element_blank(),axis.ticks.y=element_blank(),plot.margin=unit(c(.5,.5,.5,.55),"cm")) + ylab(" ") + xlab("Custom Numbering") + scale_x_continuous(breaks=exonRange,labels=paste(Index[exonRange]))
-       
-
-            }else{
- 
-            qplot(data=Genes,MP,Ind,fill=Gene,geom="tile",width=Length,label=Gene) + geom_text() + theme_bw() + theme(legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_blank(),axis.text.y = element_blank(),axis.ticks.y=element_blank(),plot.margin=unit(c(.5,.5,.5,.55),"cm")) + ylab(" ") + xlab(" ")
+        gene_plot <-  ggplot(Genes, aes(x=MP, y=Ind)) +
+          geom_tile(aes(fill = Gene, width = Length, colour="grey50")) +
+          geom_text(aes(label = Gene)) + 
+          theme_bw() + 
+          theme(legend.position = "none",
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.text.y = element_blank(),
+                axis.ticks.y = element_blank(),
+                axis.text.x = element_blank(),
+                axis.ticks.x = element_blank(),
+                plot.margin = unit(c(t=.5, r=.05, b=.5, l=.55), "cm")) + 
+          ylab(" ") 
+          
+        
+        if (!is.null(exon_numbers)) {
+          gene_plot <- gene_plot +
+            xlab("Custom Numbering") + 
+            scale_x_continuous(breaks = exonRange, labels = paste(Index[exonRange]))
+        } else{
+          gene_plot <- gene_plot + xlab(" ")
         }
-    }
+        print(gene_plot)
+      }
     })
 
 
 
     output$CIplot<-renderPlot({
-        
         if(!input_selected(input)){
             plot(NULL,xlim=c(1,10),ylim=c(0,1000))
         }else{
