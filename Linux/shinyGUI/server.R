@@ -4,13 +4,23 @@ library(reshape)
 library(grid)
 library(ExomeDepth)
 
-load('Data.RData')          #wrapper script copies data to this hard path
 
 genesis_calls <- read.csv('cnvs.csv')
 cnv.calls$merge_id <- paste(gsub('_PE_sorted', '', cnv.calls$sample), cnv.calls$start, cnv.calls$end, sep='-')
 genesis_calls$merge_id <- paste(genesis_calls$sample, genesis_calls$start, genesis_calls$end, sep='-')
 cnv.calls<- cnv.calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
 cnv.calls <- cnv.calls[ , !(names(cnv.calls) %in% 'merge_id')]
+
+
+variant_selected <- function(input) {
+  !(input$selVar1 == "None" | is.null(input$selVar1))
+}
+
+input_selected <- function(input) {
+  variant_selected(input) & "minEx1" %in% names(input)
+}
+
+
 # Define server logic required to draw a histogram
 
 shinyServer(function(input, output) {
@@ -120,10 +130,13 @@ shinyServer(function(input, output) {
 
 
         output$PlotSampleHighlight<-renderUI({
-               selectInput("SampHigh",choices=as.list(c(sample.names)),label="Select sample to highlight",multiple=F,selected=sample.names[1])        
+               selectInput(
+                 inputId = "SampHigh",
+                 choices = as.list(c(sample.names)),
+                 label = "Select sample to highlight",
+                 multiple = FALSE,
+                 selected = get_metadata("sample_name"))        
         })
- 
-
 
         output$PlotSamplesInput<-renderUI({
             if(input$ChooseFrom==1){    
@@ -135,7 +148,12 @@ shinyServer(function(input, output) {
 
 
         output$PlotGenesInput<-renderUI({
-                    selectInput("PlotGenes",choices=as.list(paste(unique(bed.file[,4]))),label="Select genes to plot",multiple=T,selected=paste(unique(bed.file[,4])[1:2]))
+                    selectInput(
+                      "PlotGenes",
+                      choices = as.list(paste(unique(bed.file[,4]))),
+                      label = "Select genes to plot",
+                      multiple = TRUE,
+                      selected = factor(get_metadata("gene_name"), levels = unique(bed.file[,4])))
         })
 
 
@@ -148,12 +166,13 @@ shinyServer(function(input, output) {
                 Data<-cbind(exons,ExomeCount[exons,sample.names])
                 Data1<-melt(Data,id=c("exons"))
                 Data1$exons<-as.factor(Data1$exons)
-                if(input$plotScale==2){Data1$value=log(Data1$value)}
+                if(input$plotScale=="2"){Data1$value=log(Data1$value)}
                 p<-ggplot(data=Data1[Data1$variable%in%input$PlotSamp,],aes(x=exons,y=value))  + geom_boxplot(width=0.75) + theme_bw() + xlab(NULL)+ ggtitle("")
-                if(input$plotScale==1){p <- p + ylab("Coverage")}
-                if(input$plotScale==2){p <- p + ylab("Log (Coverage)")}
-                p<-p + geom_point(data=Data1[Data1$variable==input$SampHigh,],aes(x=exons,y=value),colour="blue",cex=2.5)
-                p <- p + labs(title=paste('Sample:', gsub("_PE_sorted","", input$PlotSamp), '; Gene: ', input$PlotGenes, sep=' ' ))
+                if(input$plotScale=="1"){p <- p + ylab("Coverage")}
+                if(input$plotScale=="2"){p <- p + ylab("Log (Coverage)")}
+                p <- p + 
+                  geom_point(data = Data1[Data1$variable==input$SampHigh,], aes(x=exons,y=value), colour="blue", cex=2.5) + 
+                  labs(title = paste('Sample:', gsub("_PE_sorted","", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' '))
                 p
             
             }else if(input$plotType==2){
@@ -289,214 +308,191 @@ shinyServer(function(input, output) {
     )
 
     output$selVar<-renderUI({
-        selectInput("selVar1","Use the CNV ID given in the table above",c('None',1:nrow(cnv.calls)))
+        selectInput(
+        inputId = "selVar1",
+        label = "Use the CNV ID given in the table above",
+        choices = c("None", seq(nrow(cnv.calls))),
+        selected = get_metadata("cnv_id"))
     })
 
     output$minEx <- renderUI({
-        if(input$selVar1!="None"){
-            numericInput("minEx1",min=1,max=nrow(bed.file)-1,value=max(cnv.calls[strtoi(input$selVar1),]$start.p-5,1),label="First exon")
+        if(variant_selected(input)){
+            numericInput("minEx1", min=1, max=nrow(bed.file)-1,
+                         value=max(cnv.calls[strtoi(input$selVar1),]$start.p-5,1),
+                         label="First exon")
         }
     })
 
     output$maxEx <- renderUI({
-        if(input$selVar1!="None"){
-            numericInput("maxEx1",min=2,max=nrow(bed.file),value=min(cnv.calls[strtoi(input$selVar1),]$end.p+5,nrow(bed.file)),label="Last")
+      if(variant_selected(input)){
+            numericInput("maxEx1",min=2,max=nrow(bed.file),
+                         value=min(cnv.calls[strtoi(input$selVar1),]$end.p+5,nrow(bed.file)),
+                         label="Last")
         }
     })
 
-    output$plot<-renderPlot({
-        if(input$selVar1=="None"){
-            plot(NULL,xlim=c(1,10),ylim=c(0,1000))
-        }else{
-            Sample<-cnv.calls[strtoi(input$selVar1),]$sample
-            exonRange<-input$minEx1:input$maxEx1
-	    VariantExon<- unlist(mapply(function(x,y)x:y,cnv.calls[cnv.calls$sample==Sample,]$start.p,cnv.calls[cnv.calls$sample==Sample,]$end.p))       
-            if(input$chSamp==1){
-                refs_sample<-refs[[Sample]]
-                Data<-cbind(ExomeCount[exonRange,c(Sample,refs_sample)],exonRange) 
-                if(input$chScale==2){Data[,-ncol(Data)]=log(Data[,-ncol(Data)])}
-               # if(input$chScale==3){Data_temp<-data.frame(cbind(t(apply(Data[,1:(ncol(Data)-1)],1,function(x)x-median(x))),exonRange));names(Data_temp)<-names(Data);Data<-Data_temp}
-               # if(input$chScale==4){Data_temp<-data.frame(cbind(apply(Data[,1:(ncol(Data)-1)],2,function(x)x-median(x)),exonRange));names(Data_temp)<-names(Data);Data<-Data_temp}
-               # if(input$chScale==5){Data_temp<-t(apply(Data[,1:(ncol(Data)-1)],1,function(x)x-median(x)));Data_temp<-apply(Data_temp,2,function(x)x-median(x));Data_temp<-data.frame(Data_temp,exonRange);names(Data_temp)<-names(Data);Data<-Data_temp}
-                Data1<-melt(Data,id=c("exonRange"))
-		testref<-rep("gray",nrow(Data1))
-		testref[Data1$variable==Sample]="blue"
-		Data1<-data.frame(Data1,testref)
-		levels(Data1$variable)=c(levels(Data1$variable),"VAR")
-		levels(Data1$testref)=c(levels(Data1$testref),"red")
-		data_temp<-Data1[Data1$variable==Sample & Data1$exonRange%in%VariantExon,]
-	        if(nrow(data_temp)>0){
-    		    data_temp$variable="VAR"
-		    data_temp$testref="red"
-   		    Data1<-rbind(Data1,data_temp)
-		}
-		levels(Data1$testref)=c("Test Sample","Reference Sample","Affected exon")
-		new_cols=c("blue","gray","red")
-                	
-                A1<-ggplot(data=Data1,aes(x=exonRange,y=value,group=variable,colour=testref))
-                A1 <- A1 + labs(title=gsub("_PE_sorted","",Sample))
-                A1<-A1 + geom_point(cex=2.5,lwd=1.5) 
-                A1<-A1 + scale_colour_manual(values=new_cols)  
-                A1<-A1 + geom_line(data=subset(Data1,testref=="Reference Sample"),lty="dashed",lwd=1.5,col="grey") 
-                A1<-A1 + geom_point(data=subset(Data1,testref=="Reference Sample"),cex=2.5,col="grey")   
-                A1<-A1 + geom_line(data=subset(Data1,testref=="Test Sample"),lty="dashed",lwd=1.5,col="blue")  
-                A1<-A1 + geom_point(data=subset(Data1,testref=="Test Sample"),cex=2.5,col="blue") 
-                A1<-A1 + geom_point(data=subset(Data1,testref=="Affected exon"),cex=3.5,col="red") 
-                 if(input$chScale==1){
-                    A1<-A1 + ylab("Coverage") + xlab("")
-                }
-                if(input$chScale==2){
-                    A1<-A1 + ylab("Log (Coverage)") + xlab("")
-                }
-                A1<-A1 + theme_bw() + theme(legend.position="none",axis.text.x=element_blank())
-                A1<-A1 + scale_x_continuous(breaks=exonRange)#,labels=paste(exonRange))
-
-
-                Data2<-Data1[Data1$testref=="Affected exon",]
-                if(nrow(Data2)>1){
-                    for(i in 1:(nrow(Data2)-1)){
-                        if((Data2$exonRange[i]+1)==Data2$exonRange[i+1]){ A1<-A1 + geom_line(data=Data2[i:(i+1),],aes(x=exonRange,y=value,group=1),lwd=1.5,col="red")}
-                    } 
-                }
-                
-                print(A1)
-        
-                }else if(input$chSamp==2){
-                    refs_sample<-sample.names[sample.names!=Sample]
-                    Data<-cbind(ExomeCount[exonRange,c(Sample,refs_sample)],exonRange)
-                    if(input$chScale==2){Data[,-ncol(Data)]=log(Data[,-ncol(Data)])}
-                    #if(input$chScale==3){Data_temp<-data.frame(cbind(t(apply(Data[,1:(ncol(Data)-1)],1,function(x)x-median(x))),exonRange));names(Data_temp)<-names(Data);Data<-Data_temp}
-                    #if(input$chScale==4){Data_temp<-data.frame(cbind(apply(Data[,1:(ncol(Data)-1)],2,function(x)x-median(x)),exonRange));names(Data_temp)<-names(Data);Data<-Data_temp}
-                    #if(input$chScale==5){Data_temp<-t(apply(Data[,1:(ncol(Data)-1)],1,function(x)x-median(x)));Data_temp<-apply(Data_temp,2,function(x)x-median(x));Data_temp<-data.frame(Data_temp,exonRange);names(Data_temp)<-names(Data);Data<-Data_temp}
-		    Data1<-melt(Data,id=c("exonRange"))
-                    testref<-rep("gray",nrow(Data1))
-		    testref[Data1$variable==Sample]="blue"
-		    Data1<-data.frame(Data1,testref)
-		    levels(Data1$variable)=c(levels(Data1$variable),"VAR")
-		    levels(Data1$testref)=c(levels(Data1$testref),"red")
-		    data_temp<-Data1[Data1$variable==Sample & Data1$exonRange%in%VariantExon,]
-		    if(nrow(data_temp)>0){
-		        data_temp$variable="VAR"
-			data_temp$testref="red"
-			Data1<-rbind(Data1,data_temp)
-		    }
-		    levels(Data1$testref)=c("Test Sample","Reference Sample","Affected exon")
-    		    new_cols=c("blue","gray","red")
-					
-                    A1<-ggplot(data=Data1,aes(x=exonRange,y=value,group=variable,colour=testref))
-                    A1<-A1 + geom_point(cex=2.5,lwd=1.5) 
-                    A1<-A1 + scale_colour_manual(values=new_cols)  
-                    A1<-A1 + geom_line(data=subset(Data1,testref=="Reference Sample"),lty="dashed",lwd=1.5,col="grey") 
-                    A1<-A1 + geom_point(data=subset(Data1,testref=="Reference Sample"),cex=2.5,col="grey")   
-                    A1<-A1 + geom_line(data=subset(Data1,testref=="Test Sample"),lty="dashed",lwd=1.5,col="blue")  
-                    A1<-A1 + geom_point(data=subset(Data1,testref=="Test Sample"),cex=2.5,col="blue") 
-                    A1<-A1 + geom_point(data=subset(Data1,testref=="Affected exon"),cex=3.5,col="red") 
-                    if(input$chScale==1){
-                        A1<-A1 + ylab("Coverage") + xlab("")
-                    }
-                    if(input$chScale==2){
-                        A1<-A1 + ylab("Log (Coverage)") + xlab("")
-                    }   
-                    A1<-A1 + theme_bw() + theme(legend.position="none",axis.text.x=element_blank())
-                    A1<-A1 + scale_x_continuous(breaks=exonRange)#,labels=paste(exonRange))
-
-
-                Data2<-Data1[Data1$testref=="Affected exon",]
-                if(nrow(Data2)>1){
-                    for(i in 1:(nrow(Data2)-1)){
-                        if((Data2$exonRange[i]+1)==Data2$exonRange[i+1]){ A1<-A1 + geom_line(data=Data2[i:(i+1),],aes(x=exonRange,y=value,group=1),lwd=1.5,col="red") }
-                    } 
-                }
-                
-                print(A1)
-        
- 
-
-                }else if(input$chSamp==3){
-                    Data1<-data.frame(rep(Sample,length(exonRange)),ExomeCount[exonRange,Sample],exonRange)
-                    names(Data1)<-c("variable","value","exonRange")       
-                    if(input$chScale==2){Data1$value=log(Data1$value)} 
-                #    if(input$chScale==4){Data1$value = Data1$value - median(ExomeCount[,Sample])}
-                    testref<-rep("gray",nrow(Data1))
-		    testref[Data1$variable==Sample]="blue"
-        	    Data1<-data.frame(Data1,testref)
-        	    levels(Data1$variable)=c(levels(Data1$variable),"VAR")
-		    levels(Data1$testref)=c(levels(Data1$testref),"red")
-        	    data_temp<-Data1[Data1$variable==Sample & Data1$exonRange%in%VariantExon,]
-        	    if(nrow(data_temp)>0){
-		        data_temp$variable="VAR"
-			data_temp$testref="red"
-			Data1<-rbind(Data1,data_temp)
-		    }
-		    levels(Data1$testref)=c("Test Sample","Affected exon")
-		    new_cols=c("blue","red")
-                	
-                    A1<-ggplot(data=Data1,aes(x=exonRange,y=value,group=variable,colour=testref))
-                    A1<-A1 + geom_point(cex=2.5,lwd=1.5) 
-                    A1<-A1 + scale_colour_manual(values=new_cols) 
-                    A1<-A1 + geom_line(data=subset(Data1,testref=="Test Sample"),lty="dashed",lwd=1.5,col="blue") 
-                    A1<-A1 + geom_point(data=subset(Data1,testref=="Affected exon"),cex=3.5,col="red") 
-                    if(input$chScale==1){
-                        A1<-A1 + ylab("Coverage") + xlab("")
-                    }
-                    if(input$chScale==2){
-                        A1<-A1 + ylab("Log (Coverage)") + xlab("")
-                    } 
-                    A1<-A1 + theme_bw() + theme(legend.position="none",axis.text.x=element_blank())
-                    A1<-A1 + scale_x_continuous(breaks=exonRange)#,labels=paste(exonRange))
-
-                Data2<-Data1[Data1$testref=="Affected exon",]
-                if(nrow(Data2)>1){
-                for(i in 1:(nrow(Data2)-1)){
-                        if((Data2$exonRange[i]+1)==Data2$exonRange[i+1]){ A1<-A1 + geom_line(data=Data2[i:(i+1),],aes(x=exonRange,y=value,group=1),lwd=1.5,col="red") }
-                    } 
-                }
- 
-                print(A1)
-
-            }
+    output$plot <- renderPlot({
+      if (!input_selected(input)) {
+        plot(NULL, xlim = c(1, 10), ylim = c(0, 1000))
+      } else {
+        Sample <- cnv.calls[strtoi(input$selVar1),]$sample
+        exonRange <- input$minEx1:input$maxEx1
+        VariantExon <-
+          unlist(mapply(function(x, y)
+            x:y, cnv.calls[cnv.calls$sample == Sample,]$start.p, cnv.calls[cnv.calls$sample == Sample,]$end.p))
+        if (input$chSamp == 1) {
+          # sample reference
+          refs_sample <- refs[[Sample]]
+          Data <- cbind(ExomeCount[exonRange, c(Sample, refs_sample)], exonRange)
+          if (input$chScale == 2) {
+            Data[,-ncol(Data)] = log(Data[,-ncol(Data)])
+          }
+          Data1 <- melt(Data, id = c("exonRange"))
+        } else if (input$chSamp == 2) {
+          # All others
+          refs_sample <- sample.names[sample.names != Sample]
+          Data <- cbind(ExomeCount[exonRange, c(Sample, refs_sample)], exonRange)
+          if (input$chScale == 2) {
+            Data[,-ncol(Data)] = log(Data[,-ncol(Data)])
+          }
+          Data1 <- melt(Data, id = c("exonRange"))
+        } else if (input$chSamp == 3) {
+          # Just the sample alone
+          Data1 <- data.frame(rep(Sample, length(exonRange)), ExomeCount[exonRange, Sample], exonRange)
+          names(Data1) <- c("variable", "value", "exonRange")
+          if (input$chScale == 2) {
+            Data1$value = log(Data1$value)
+          }
         }
-   
+        # Common plotting code for all conditions
+        testref <- rep("gray", nrow(Data1))
+        testref[Data1$variable == Sample] = "blue"
+        Data1 <- data.frame(Data1, testref)
+        levels(Data1$variable) = c(levels(Data1$variable), "VAR")
+        colour_scales = c("blue", "gray", "red")
+        levels(Data1$testref) = colour_scales
+        data_temp <- Data1[Data1$variable == Sample & Data1$exonRange %in% VariantExon,]
+        if (nrow(data_temp) > 0) {
+          data_temp$variable = "VAR"
+          data_temp$testref = "red"
+          Data1 <- rbind(Data1, data_temp)
+        }
+        levels(Data1$testref) = c("Test Sample", "Reference Sample", "Affected exon")
+        
+        A1 <- ggplot(data = Data1,
+                     aes(x = exonRange, y = value, group = variable, colour = testref)) +
+          labs(title = gsub("_PE_sorted", "", Sample)) +
+          geom_point(cex = 2.5, lwd = 1.5) +
+          scale_colour_manual(values = colour_scales) +
+          geom_line(
+            data = subset(Data1, testref == "Reference Sample"),
+            lty = "dashed",
+            lwd = 1.5,
+            col = "grey"
+          ) +
+          geom_point(
+            data = subset(Data1, testref == "Reference Sample"),
+            cex = 2.5,
+            col = "grey"
+          ) +
+          geom_line(
+            data = subset(Data1, testref == "Test Sample"),
+            lty = "dashed",
+            lwd = 1.5,
+            col = "blue"
+          ) +
+          geom_point(
+            data = subset(Data1, testref == "Test Sample"),
+            cex = 2.5,
+            col = "blue"
+          ) +
+          geom_point(
+            data = subset(Data1, testref == "Affected exon"),
+            cex = 3.5,
+            col = "red"
+          )
+        if (input$chScale == 1) {
+          A1 <- A1 + ylab("Coverage") + xlab("")
+        }
+        if (input$chScale == 2) {
+          A1 <- A1 + ylab("Log (Coverage)") + xlab("")
+        }
+        A1 <- A1 +
+          theme_bw() +
+          theme(legend.position = "none", axis.text.x = element_blank()) +
+          scale_x_continuous(breaks = exonRange)#,labels=paste(exonRange))
+        
+        
+        Data2 <- Data1[Data1$testref == "Affected exon",]
+        if (nrow(Data2) > 1) {
+          for (i in 1:(nrow(Data2) - 1)) {
+            if ((Data2$exonRange[i] + 1) == Data2$exonRange[i + 1]) {
+              A1 <- A1 + geom_line(
+                data = Data2[i:(i + 1),],
+                aes(x = exonRange, y = value, group = 1),
+                lwd = 1.5,
+                col = "red"
+              )
+            }
+          }
+        }
+        print(A1)
+      }
     })
 
 
     
-    output$genes<-renderPlot({
-        if(input$selVar1=="None"){
-            par(mar=rep(0,4))
-            plot.new()
-        }else{
-            exonRange<-input$minEx1:input$maxEx1
-            genes_sel = unique(bed.file[exonRange,4])
-            temp<-cbind(1:nrow(bed.file),bed.file)[exonRange,]
-            len<-table(temp$name)
-            mp<-tapply(exonRange,temp[,5],mean)
-            mp<-mp[genes_sel]
-            len<-len[genes_sel]
-            Genes<-data.frame(genes_sel,mp,len-.5,1)
-            names(Genes)=c("Gene","MP","Length","Ind")
-   
-            if(!is.null(exon_numbers)){
+    output$genes <- renderPlot({
+      if (!input_selected(input)) {
+        par(mar = rep(0, 4))
+        plot.new()
+      } else{
+        exonRange <- input$minEx1:input$maxEx1
+        genes_sel <-  unique(bed.file[exonRange, 4])
+        temp <- cbind(1:nrow(bed.file), bed.file)[exonRange, ]
+        len <- summary(temp$name)
+        mp <- tapply(exonRange, temp[, 5], mean)
+        mp <- unname(mp[genes_sel])
+        len <- unname(len[genes_sel] - 0.5)
+        Genes <- data.frame(Gene = genes_sel, 
+                            MP = mp, 
+                            Length = len,
+                            Ind = 1)
 
-             qplot(data=Genes,MP,Ind,fill=Gene,geom="tile",width=Length,label=Gene) + geom_text() + theme_bw() + theme(legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.text.y = element_blank(),axis.ticks.y=element_blank(),plot.margin=unit(c(.5,.5,.5,.55),"cm")) + ylab(" ") + xlab("Custom Numbering") + scale_x_continuous(breaks=exonRange,labels=paste(Index[exonRange]))
-       
-
-            }else{
- 
-            qplot(data=Genes,MP,Ind,fill=Gene,geom="tile",width=Length,label=Gene) + geom_text() + theme_bw() + theme(legend.position="none",panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_blank(),axis.text.y = element_blank(),axis.ticks.y=element_blank(),plot.margin=unit(c(.5,.5,.5,.55),"cm")) + ylab(" ") + xlab(" ")
+        gene_plot <-  ggplot(Genes, aes(x=MP, y=Ind)) +
+          geom_tile(aes(fill = Gene, width = Length, colour="grey50")) +
+          geom_text(aes(label = Gene)) + 
+          theme_bw() + 
+          theme(legend.position = "none",
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.text.y = element_blank(),
+                axis.ticks.y = element_blank(),
+                axis.text.x = element_blank(),
+                axis.ticks.x = element_blank(),
+                plot.margin = unit(c(t=.5, r=.05, b=.5, l=.55), "cm")) + 
+          ylab(" ") 
+          
+        
+        if (!is.null(exon_numbers)) {
+          gene_plot <- gene_plot +
+            xlab("Custom Numbering") + 
+            scale_x_continuous(breaks = exonRange, labels = paste(Index[exonRange]))
+        } else{
+          gene_plot <- gene_plot + xlab(" ")
         }
-    }
+        print(gene_plot)
+      }
     })
 
 
 
     output$CIplot<-renderPlot({
-        
-        if(input$selVar1=="None"){
+        if(!input_selected(input)){
             plot(NULL,xlim=c(1,10),ylim=c(0,1000))
         }else{
             Sample<-cnv.calls[strtoi(input$selVar1),]$sample
-            exonRange<-input$minEx1:input$maxEx1
+            exonRange <- input$minEx1:input$maxEx1
             refs_sample<-refs[[Sample]]
             Totals<-rowSums(ExomeCount[exonRange,c(Sample,refs_sample)])
             ratio = (ExomeCount[exonRange,Sample]/Totals)/models[[Sample]][1]

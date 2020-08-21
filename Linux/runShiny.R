@@ -10,9 +10,13 @@ args=commandArgs(asValues=TRUE)
 
 Data<-args$Rdata
 cnvs <- args$cnvs
+metadata <- args$metadata
 
+# Copy over argument files
 file.copy(Data, "shinyGUI/Data.RData",overwrite=TRUE)
 file.copy(cnvs, "shinyGUI/cnvs.csv",overwrite=TRUE)
+file.copy(metadata, "shinyGUI/metadata.csv",overwrite=TRUE)
+
 runApp("shinyGUI",launch.browser=F, host='0.0.0.0', port=5888)
 
 print("END runShiny.R")
