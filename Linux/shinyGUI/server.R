@@ -5,11 +5,25 @@ library(grid)
 library(ExomeDepth)
 
 
+# Only show cnv calls that are from genesis
 genesis_calls <- read.csv('cnvs.csv')
 cnv.calls$merge_id <- paste(gsub('_PE_sorted', '', cnv.calls$sample), cnv.calls$start, cnv.calls$end, sep='-')
 genesis_calls$merge_id <- paste(genesis_calls$sample, genesis_calls$start, genesis_calls$end, sep='-')
 cnv.calls<- cnv.calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
+
+# add in the gosh_cnv_id column, matching the order of cnvs
+genesis_filtered_calls <-  genesis_calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
+cnv.calls$gosh_cnv_id <- genesis_filtered_calls$gosh_cnv_id[rank(cnv.calls$merge_id)]
 cnv.calls <- cnv.calls[ , !(names(cnv.calls) %in% 'merge_id')]
+
+
+get_cnv_id <- function(calls){
+  # gets CNV id for the metadata's cnv_id and sample
+  matching_calls <- calls[calls$gosh_cnv_id == get_metadata("cnv_id")
+                          & calls$sample == paste0(get_metadata("sample_name"), "_PE_sorted")
+                          , ]
+  matching_calls$ID[1]
+}
 
 
 variant_selected <- function(input) {
@@ -135,7 +149,7 @@ shinyServer(function(input, output) {
                  choices = as.list(c(sample.names)),
                  label = "Select sample to highlight",
                  multiple = FALSE,
-                 selected = get_metadata("sample_name"))        
+                 selected = paste0(get_metadata("sample_name"), "_PE_sorted" ) )        
         })
 
         output$PlotSamplesInput<-renderUI({
@@ -290,15 +304,8 @@ shinyServer(function(input, output) {
         genes.exons.split[i]=paste(genes.exons.short[[j]][single.gene==all.genes],collapse=", ")
     }
         
-   # CNVs<-cbind(cnv.calls_ids[,c("ID","sample","start.p","end.p","nexons","Gene")],genes.exons.split,cnv.calls_ids[,c("type","reads.ratio","correlation","Confidence")])
-   # names(CNVs)<-c("CNV identifier","Sample","First exon","Last exon","Number of exons","Gene","Gene.Exon","Type","Read ratio","Correlation","Confidence")
-    
-
-   # CNVs<-cbind(cnv.calls_ids[,c("ID","sample","start.p","end.p","nexons","Gene")],genes.exons.split,cnv.calls_ids[,c("type","reads.ratio","correlation")])
-   # names(CNVs)<-c("CNV ID","Sample","First exon","Last exon","Number of exons","Gene","Gene.Exon","Type","Read ratio","Correlation")
-    
-    CNVs<-cbind(cnv.calls_ids[,c("ID","sample","start.p","end.p","nexons","Gene")],Index[cnv.calls_ids$start.p],Index[cnv.calls_ids$end.p],cnv.calls_ids[,c("type","reads.ratio","correlation")])
-    names(CNVs)<-c("CNV ID","Sample","First exon (BED file)","Last exon (BED file)","Number of exons","Gene","First exon (custom)","Last exon (custom)","Type","Read ratio","Correlation")
+    CNVs<-cbind(cnv.calls_ids[,c("ID","gosh_cnv_id","sample","start.p","end.p","nexons","Gene")],Index[cnv.calls_ids$start.p],Index[cnv.calls_ids$end.p],cnv.calls_ids[,c("type","reads.ratio","correlation")])
+    names(CNVs)<-c("CNV ID","GOSHG2P CNV ID","Sample","First exon (BED file)","Last exon (BED file)","Number of exons","Gene","First exon (custom)","Last exon (custom)","Type","Read ratio","Correlation")
     
 
 
@@ -312,7 +319,8 @@ shinyServer(function(input, output) {
         inputId = "selVar1",
         label = "Use the CNV ID given in the table above",
         choices = c("None", seq(nrow(cnv.calls))),
-        selected = get_metadata("cnv_id"))
+        selected = get_cnv_id(cnv.calls_ids)
+        )
     })
 
     output$minEx <- renderUI({
