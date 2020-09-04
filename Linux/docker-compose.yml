@@ -1,0 +1,18 @@
+version: '3.2'
+services:
+  shiny:
+    build:
+      context: .
+      dockerfile: "Dockerfile"
+    image: decon_webapp:v0.1
+    command: "Rscript runShiny.R"
+    volumes:
+      - './shinyGUI:/usr/scripts/DECoN_webapp/Linux/shinyGUI'
+    ports:
+      - '5888:5888'
+    environment:
+      HTTP_PROXY: ${HTTP_PROXY}
+      http_proxy: ${http_proxy}
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      https_proxy: ${https_proxy}
+
