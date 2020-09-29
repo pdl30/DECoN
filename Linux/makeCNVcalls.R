@@ -1,5 +1,3 @@
-packrat::on()
-
 library(R.utils)
 
 print("BEGIN makeCNVCalls.R")

@@ -1,5 +1,3 @@
-packrat::on()
-
 library(shiny)
 library(ggplot2)
 
