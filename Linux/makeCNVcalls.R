@@ -417,8 +417,13 @@ temp = cnv.calls[cnv.calls$sample==Sample,]
 
 if(!is.null(exon_numbers)){
 save(ExomeCount,bed.file,counts,fasta,sample.names,bams,cnv.calls,cnv.calls_ids,refs,models,exon_numbers,exons,file=paste(out,".RData",sep=""))
+items <- list(ExomeCount=ExomeCount, bed.file=bed.file, fasta=fasta, sample.names=sample.names, bams=bams, cnv.calls=cnv.calls, cnv.calls_ids=cnv.calls_ids, refs=refs, models=models, exon_numbers=exon_numbers, exons=exons)
 }else{
 save(ExomeCount,bed.file,counts,fasta,sample.names,bams,cnv.calls,cnv.calls_ids,refs,models,exon_numbers,file=paste(out,".RData",sep=""))
+items <- list(ExomeCount=ExomeCount, bed.file=bed.file, fasta=fasta, sample.names=sample.names, bams=bams, cnv.calls=cnv.calls, cnv.calls_ids=cnv.calls_ids, refs=refs, models=models, exon_numbers=exon_numbers)
 }
 }
+
+saveRDS(items, file=paste0(out, ".RDS", compress = FALSE)
+
 print("END makeCNVCalls.R")
