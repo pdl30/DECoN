@@ -1,4 +1,3 @@
-packrat::on()
 print("BEGIN ReadInBams.R")
 
 library(R.utils)

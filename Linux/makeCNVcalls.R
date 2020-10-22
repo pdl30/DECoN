@@ -1,5 +1,3 @@
-packrat::on()
-
 library(R.utils)
 
 print("BEGIN makeCNVCalls.R")
@@ -25,7 +23,8 @@ exon_numbers=args$exons
 
 out=args$out
 if(is.null(out)){out="DECoNResults"}
-
+sample_out=args$sample_out
+if(is.null(sample_out)){sample_out="DECoNSampleResults"}
 
 Custom=as.logical(args$custom)
 if(length(Custom)==0){Custom=FALSE}
@@ -421,4 +420,25 @@ save(ExomeCount,bed.file,counts,fasta,sample.names,bams,cnv.calls,cnv.calls_ids,
 save(ExomeCount,bed.file,counts,fasta,sample.names,bams,cnv.calls,cnv.calls_ids,refs,models,exon_numbers,file=paste(out,".RData",sep=""))
 }
 }
+saveit <- function(..., file) {
+  x <- list(...)
+  save(list=names(x), file=file, envir=list2env(x))
+}
+
+for(i in 1:length(sample.names)){
+    SampleCount <- ExomeCount[,c('space', 'start', 'end', 'width', 'names', 'GC', sample.names[i], 'chromosome')]
+    saveit(SampleCount=SampleCount, 
+         bed.file=bed.file, 
+         fasta=fasta, 
+         sample.names=sample.names[i], 
+         bams=bams[i], 
+         cnv.calls=cnv.calls[which(cnv.calls[,'sample']==sample.names[i]),],
+         cnv.calls_ids=cnv.calls_ids[which(cnv.calls_ids[,'sample']==sample.names[i]),],
+         refs=refs[sample.names[i]],
+         models=models[sample.names[i]],
+         exon_numbers=exon_numbers,
+         file=paste0(sample_out, '/', sample.names[i], '.RData')
+         )
+}
+
 print("END makeCNVCalls.R")
