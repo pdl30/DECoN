@@ -206,7 +206,7 @@ shinyServer(function(input, output) {
                 for(gene in input$PlotGenes){
                     p<-p + geom_line(data=Data1[Data1$variable==input$SampHigh & Data1$exons%in%which(bed.file[,4]==gene),],aes(x=exons,y=value,group=variable),colour="blue")
                 }
-                p <- p + labs(title=paste('Sample:', gsub("_PE_sorted","", input$PlotSamp), '; Gene: ', input$PlotGenes, sep=' ' ))
+                p <- p + labs(title=paste('Sample:', gsub("_PE_sorted","", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' ' ))
                 p
             }
 
