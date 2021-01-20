@@ -13,7 +13,8 @@ cnv.calls<- cnv.calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
 
 # add in the gosh_cnv_id column, matching the order of cnvs
 genesis_filtered_calls <-  genesis_calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
-cnv.calls$gosh_cnv_id <- genesis_filtered_calls$gosh_cnv_id[rank(cnv.calls$merge_id)]
+# cnv.calls$gosh_cnv_id <- genesis_filtered_calls$gosh_cnv_id[rank(cnv.calls$merge_id)]
+cnv.calls$gosh_cnv_id <- genesis_filtered_calls$gosh_cnv_id[match(cnv.calls$merge_id, genesis_filtered_calls$merge_id)]
 cnv.calls <- cnv.calls[ , !(names(cnv.calls) %in% 'merge_id')]
 
 
