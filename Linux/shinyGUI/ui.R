@@ -48,10 +48,10 @@ shinyUI(navbarPage(
       )
     ),
     
-    plotOutput('plot', height = 200),
+    plotOutput('plot', height = 600),
     plotOutput('genes', height = 75),
     #,width="87.5%"),
-    plotOutput('CIplot', height = 150)#,width="87.5%")
+    plotOutput('CIplot', height = 200)#,width="87.5%")
     
   ),
   
