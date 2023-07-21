@@ -4,10 +4,15 @@ library(reshape)
 library(grid)
 library(ExomeDepth)
 
+# getting bam suffix
+run_name <- get_metadata("run_name")
+if (substr(run_name,(nchar(run_name)+1)-2,nchar(run_name)) == 'MP') { 
+    bam_suffix = '_PE_sorted_tumor'
+    } else {bam_suffix = '_PE_sorted'}
 
 # Only show cnv calls that are from genesis
 genesis_calls <- read.csv('cnvs.csv')
-cnv.calls$merge_id <- paste(gsub('_PE_sorted', '', cnv.calls$sample), cnv.calls$start, cnv.calls$end, sep='-')
+cnv.calls$merge_id <- paste(gsub(bam_suffix, '', cnv.calls$sample), cnv.calls$start, cnv.calls$end, sep='-')
 genesis_calls$merge_id <- paste(genesis_calls$sample, genesis_calls$start, genesis_calls$end, sep='-')
 cnv.calls<- cnv.calls[cnv.calls$merge_id %in% genesis_calls$merge_id,]
 
@@ -21,7 +26,7 @@ cnv.calls <- cnv.calls[ , !(names(cnv.calls) %in% 'merge_id')]
 get_cnv_id <- function(calls){
   # gets CNV id for the metadata's cnv_id and sample
   matching_calls <- calls[calls$gosh_cnv_id == get_metadata("cnv_id")
-                          & calls$sample == paste0(get_metadata("sample_name"), "_PE_sorted")
+                          & calls$sample == paste0(get_metadata("sample_name"), bam_suffix)
                           , ]
   matching_calls$ID[1]
 }
@@ -150,7 +155,7 @@ shinyServer(function(input, output) {
                  choices = as.list(c(sample.names)),
                  label = "Select sample to highlight",
                  multiple = FALSE,
-                 selected = paste0(get_metadata("sample_name"), "_PE_sorted" ) )        
+                 selected = paste0(get_metadata("sample_name"), bam_suffix ) )        
         })
 
         output$PlotSamplesInput<-renderUI({
@@ -187,7 +192,7 @@ shinyServer(function(input, output) {
                 if(input$plotScale=="2"){p <- p + ylab("Log (Coverage)")}
                 p <- p + 
                   geom_point(data = Data1[Data1$variable==input$SampHigh,], aes(x=exons,y=value), colour="blue", cex=2.5) + 
-                  labs(title = paste('Sample:', gsub("_PE_sorted","", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' '))
+                  labs(title = paste('Sample:', gsub(bam_suffix,"", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' '))
                 p
             
             }else if(input$plotType==2){
@@ -207,7 +212,7 @@ shinyServer(function(input, output) {
                 for(gene in input$PlotGenes){
                     p<-p + geom_line(data=Data1[Data1$variable==input$SampHigh & Data1$exons%in%which(bed.file[,4]==gene),],aes(x=exons,y=value,group=variable),colour="blue")
                 }
-                p <- p + labs(title=paste('Sample:', gsub("_PE_sorted","", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' ' ))
+                p <- p + labs(title=paste('Sample:', gsub(bam_suffix,"", input$SampHigh), '; Gene: ', input$PlotGenes, sep=' ' ))
                 p
             }
 
@@ -390,7 +395,7 @@ shinyServer(function(input, output) {
         
         A1 <- ggplot(data = Data1,
                      aes(x = exonRange, y = value, group = variable, colour = testref)) +
-          labs(title = gsub("_PE_sorted", "", Sample)) +
+          labs(title = gsub(bam_suffix, "", Sample)) +
           geom_point(cex = 2.5, lwd = 1.5) +
           scale_colour_manual(values = colour_scales) +
           geom_line(
