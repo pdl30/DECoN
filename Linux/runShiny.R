@@ -1,12 +1,16 @@
-packrat::on()
+
+renv::restore()
+
 print("BEGIN runShiny.R")
 
 library(methods)
 library(labeling)
 library(shiny)
 library(R.utils)
+library(optparse)
 
-args=commandArgs(asValues=TRUE)
+opt<-parse_args(OptionParser(option_list=option_list))
+
 
 Data<-args$Rdata
 cnvs <- args$cnvs
@@ -22,5 +26,6 @@ write.csv(
 file.copy(Data, "shinyGUI/Data.RData",overwrite=TRUE)
 file.copy(cnvs, "shinyGUI/cnvs.csv",overwrite=TRUE)
 runApp("shinyGUI",launch.browser=F, host='0.0.0.0', port=5888)
+
 
 print("END runShiny.R")
