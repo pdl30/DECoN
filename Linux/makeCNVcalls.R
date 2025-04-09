@@ -80,7 +80,7 @@ for(i in 1:length(sample.names)){												#for each sample:
         }
     },
     error = function(e){ 
-        fileConn<-file(paste(out, sample.names[i], "_decon_failure.txt",sep=""))
+        fileConn<-file(paste(out, "_", sample.names[i], "_decon_failure.txt",sep=""))
         writeLines(as.character(e), fileConn)
         close(fileConn)
         }
