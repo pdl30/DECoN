@@ -68,15 +68,23 @@ for(i in 1:length(sample.names)){												#for each sample:
     my.matrix <- as.matrix( ExomeCount[, my.choice$reference.choice, drop = FALSE])             #places selected, correlated samples into a matrix
     my.reference.selected <- apply(X = my.matrix,MAR = 1,FUN = sum)				#sums the selected samples across each exon
 
-    all.exons <- new('ExomeDepth', test = my.test, reference = my.reference.selected, formula = 'cbind(test, reference) ~ 1')       #creates ExomeDepth object containing test data, reference data, and linear relationship between them. Automatically calculates likelihoods
-    all.exons <- CallCNVs(x = all.exons, transition.probability = trans_prob, chromosome = ExomeCount$space, start = ExomeCount$start, end = ExomeCount$end, name = ExomeCount$names)	#fits a HMM with 3 states to read depth data; transition.probability - transition probability for HMM from normal to del/dup. Returns ExomeDepth object with CNVcalls
+    tryCatch({
+        all.exons <- new('ExomeDepth', test = my.test, reference = my.reference.selected, formula = 'cbind(test, reference) ~ 1')       #creates ExomeDepth object containing test data, reference data, and linear relationship between them. Automatically calculates likelihoods
+        all.exons <- CallCNVs(x = all.exons, transition.probability = trans_prob, chromosome = ExomeCount$space, start = ExomeCount$start, end = ExomeCount$end, name = ExomeCount$names)	#fits a HMM with 3 states to read depth data; transition.probability - transition probability for HMM from normal to del/dup. Returns ExomeDepth object with CNVcalls
 
-    my.ref.counts <- apply(my.matrix, MAR = 1, FUN = sum)
-    
-    if(nrow(all.exons@CNV.calls)>0){
-        cnvs= cbind(sample.names[i],cor(my.test, my.ref.counts),length( my.choice[[1]] ),all.exons@CNV.calls)
-        cnv.calls = rbind(cnv.calls,cnvs)
-    }
+        my.ref.counts <- apply(my.matrix, MAR = 1, FUN = sum)
+        
+        if(nrow(all.exons@CNV.calls)>0){
+            cnvs= cbind(sample.names[i],cor(my.test, my.ref.counts),length( my.choice[[1]] ),all.exons@CNV.calls)
+            cnv.calls = rbind(cnv.calls,cnvs)
+        }
+    },
+    error = function(e){ 
+        fileConn<-file(paste(out, "_", sample.names[i], "_decon_failure.txt",sep=""))
+        writeLines(as.character(e), fileConn)
+        close(fileConn)
+        }
+    )
     
     refs[[i]] = my.choice$reference.choice	
     models[[i]] = c(all.exons@expected[1],all.exons@phi[1])
