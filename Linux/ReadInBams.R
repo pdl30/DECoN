@@ -103,7 +103,7 @@ if (!is.null(referenceFasta)) {
   #   rdata[[ basename(bam) ]] <- countBamInGRanges.exomeDepth ( bam.file = bam, index = index, granges = target, min.mapq = min.mapq, read.width = read.width)
   #   message("Number of counted fragments : ", sum(rdata[[ basename(bam) ]]))
   # }
-  numCores <- detectCores()
+  numCores <- 32
   cl <- parallel::makeForkCluster(numCores)
   doParallel::registerDoParallel(cl)
   r <- foreach(i=1:nfiles, .combine='cbind') %dopar% {
